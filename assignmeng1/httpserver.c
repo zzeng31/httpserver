@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <stdbool.h>
-#define BUFFER_SIZE 10000
+#define BUFFER_SIZE 4096
 #define RESPONSE_HEADER "HTTP/1.1 %s\r\nContent-Length: %d\r\n\r\n"
 #define RESPONSE_TAIL "\n"
  char *header_field;
@@ -20,8 +20,8 @@
  char *http_version;
  char *descriptor;
   int cl;
-   char *host;
-   bool erro=false;
+  char *host;
+  bool erro=false;
 /**
    Converts a string to an 16 bits unsigned integer.
    Returns 0 if the string is malformed or out of the range.
@@ -61,20 +61,15 @@ int create_listen_socket(uint16_t port) {
   return listenfd;
 }
 
-
 size_t open_file2(int connfd,char *filename){
-
-   size_t ret=0;
-     size_t file_len;
-     char buffer[BUFFER_SIZE];
-
-   //char *file_content=(char*) malloc(BUFFER_SIZE * sizeof(char));
+    size_t ret=0;
+    size_t file_len;
+    char buffer[BUFFER_SIZE];
     int fo=open(filename,O_RDWR,0666);
     lseek(fo,0,SEEK_SET);
     while(1){
       file_len= read(fo, buffer, BUFFER_SIZE);
       //printf("file_len=%zu\n",file_len);
-    //printf("buffer=%s\n",buffer);
      if(send(connfd,buffer,file_len,0)){
         bzero(&buffer,BUFFER_SIZE);
      }
@@ -89,9 +84,8 @@ size_t open_file2(int connfd,char *filename){
 size_t get_file_length(char* filename){
 
     size_t ret=0;
-     size_t file_len;
-     char buffer[BUFFER_SIZE];
-   //char *file_content=(char*) malloc(BUFFER_SIZE * sizeof(char));
+    size_t file_len;
+    char buffer[BUFFER_SIZE];
     int fo=open(filename,O_RDWR,0666);
     lseek(fo,0,SEEK_SET);
     while(1){
@@ -107,15 +101,10 @@ size_t get_file_length(char* filename){
     return ret;
 }
 int create_file(int connfd,char* filename){
-
-    //filename=filename+1;
-    //printf("filename=%s\n",filename);
      size_t ret=0;
      size_t file_len;
      char buffer[BUFFER_SIZE];
-   //char *file_content=(char*) malloc(BUFFER_SIZE * sizeof(char));
     int fo=open(filename,O_RDWR+O_CREAT,0666);
-
     lseek(fo,0,SEEK_SET);
     //printf("cl=%d\n",cl);
     if(cl==0){
@@ -128,7 +117,6 @@ int create_file(int connfd,char* filename){
           break;
       }
       //printf("file_len=%zu\n",file_len);
-      //printf("file_content:%s\n",file_content);
      ret=ret+file_len;
      if(write(fo,buffer,file_len)){
        bzero(&buffer,BUFFER_SIZE);
@@ -212,14 +200,12 @@ int make_response(char **response,char *msg,int file_length,int connfd){
  char* filename=resource+1;
  char response_buffer[BUFFER_SIZE];
  char *file_buffer;
- //printf("host:%s\n");
  if(!is_valid(filename)){
    response_400(&msg,&descriptor);
    file_length=strlen(descriptor);
 
  }
  else if(strcmp(http_version,"HTTP/1.1\r")!=0){
-    //printf("http protocal:%s\n",http_version);
    response_400(&msg,&descriptor);
     file_length=strlen(descriptor);
  }
@@ -228,7 +214,6 @@ else if(have_space(host)||host==NULL){
     file_length=strlen(descriptor);
  }
 
- //printf("method=%s\n",method);
 else if(strcmp(method,"PUT")==0){
 
       int fl=create_file(connfd,filename);
@@ -244,15 +229,12 @@ else if(strcmp(method,"PUT")==0){
 
 }
 else if(strcmp(method,"GET")==0||strcmp(method,"HEAD")==0){
-  //file_length=open_file(&file_buffer,filename);
-
   if(access(filename,F_OK)==-1){
      response_404(&msg,&descriptor);
      file_length=strlen(descriptor);
 
   }
   else if(access(filename,(R_OK | W_OK))==-1){
-      //printf("%d\n",access(filename,(R_OK | W_OK)));
       response_403(&msg,&descriptor);
       file_length=strlen(descriptor);
 
@@ -260,17 +242,12 @@ else if(strcmp(method,"GET")==0||strcmp(method,"HEAD")==0){
   else{
     response_200(&msg,&descriptor);
     file_length=get_file_length(filename);
-    //file_length=strlen(file_buffer);
  }
 }
 else{
-
   response_501(&msg,&descriptor);
   file_length=strlen(descriptor);
-
 }
-
- //printf("file_length=%d\n",file_length);
  memset(response_buffer, 0, sizeof(response_buffer));
 	sprintf(response_buffer, RESPONSE_HEADER, msg, file_length);
 int headlen = strlen(response_buffer);
@@ -279,31 +256,15 @@ int headlen = strlen(response_buffer);
 	*response = (char *) malloc(totallen);
   char *tmp = *response;
 	memcpy(tmp, response_buffer, headlen);
-	//memcpy(&tmp[headlen], file_buffer, file_length);
-  //printf("8\n");
   send(connfd, tmp, totallen, 0);
-  //printf("9\n");
   if(erro==true){
-   // printf("descriptor=%s\n",descriptor);
     send(connfd,descriptor,strlen(descriptor),0);
     return totallen;
-    //memset(descriptor,0,strlen(descriptor));
-
   }
   if((strcmp(method,"GET")==0)&&(erro==false)){
-
     file_length=open_file2(connfd,filename);
-
   }
-
-
-  //memcpy(&tmp[headlen] + file_length, RESPONSE_TAIL, taillen);
- //printf("tmp=%s\n",tmp);
- //free(file_buffer);
- //free(response_buffer);
-
  return totallen;
-
 }
 
 void get_response(char* method,int connfd){
@@ -312,17 +273,11 @@ void get_response(char* method,int connfd){
   int file_length=0;
   int response_len=make_response(&response,msg,file_length,connfd);
   response_len=strlen(response);
-  //printf("response_len=%d\n",response_len);
-  //printf("strlen(response)=%lu\n",strlen(response));
-  //if(response_len>0){
-    	//send(connfd, response, response_len, 0); //将回复的内容发送给client端socket
-			free(response);
-  //}
+	free(response);
 }
 
 void handle_request(char *buffer,int connfd){
   int len=strlen(buffer);
-
   char *buffer_string=(char*)malloc((len+1)*sizeof(char));
   memcpy(buffer_string,buffer,len+1);
   char* request_string;
@@ -337,43 +292,38 @@ header_field=strtok(NULL,"|");
  method=strtok(request_line," ");
  resource=strtok(NULL," HTTP");
  http_version=strtok(NULL," ");
- //printf("1.http_version=%s\n",http_version);
-
  char *content_length_field="Content-Length";
  char *host_field="Host";
-
+ // printf("1.http_version=%s\n",http_version);
  // printf("2.method=%s\n",method);
- //printf("3.resource=%s\n",resource);
-//printf("4.header_field=%s\n",header_field);
-char* tmp=malloc(sizeof(header_field));
-strcpy(tmp,header_field);
-
-char *hp=strstr(tmp,host_field);
-if(hp!=NULL){
-  //printf("pt=%s\n",hp);
-  host=strstr(hp," ");
-  host=host+1;
-  char* ptr = strchr(host, '\n');
-  host[ptr-host+1]='\0';
-  //printf("host=%s\n",host);
+ // printf("3.resource=%s\n",resource);
+//  printf("4.header_field=%s\n",header_field);
+char *tmp=(char*)malloc(strlen(header_field)*sizeof(char));
+char *p=NULL;
+p=tmp;
+strcpy(p,header_field);
+char *hp=strstr(p,host_field);
+char *hs = hp;
+while ((*hp!='\r')&&(*hp!=0)){
+        hp++;
 }
-else{
-  //printf("host null\n");
-  host=NULL;
+if (*hp== '\r'){
+        *hp= 0;
 }
-//printf("remain header:header_field=%s\n",header_field);
+host=hs;
 
  char *pt=strstr(header_field,content_length_field);
 if(pt!=NULL){
-  //printf("pt=%s\n",pt);
   char *content_length=strstr(pt," ");
   cl=atoi(content_length);
-//printf("content_length=%s\n",content_length);
-//printf("cl=%d\n",cl);
 }
-
-
-
+if(tmp!=NULL){
+  free(tmp);
+  tmp=NULL;
+}
+if(p!=NULL){
+  p=NULL;
+}
 get_response(method,connfd);
 
 
@@ -381,7 +331,6 @@ get_response(method,connfd);
 
 void handle_connection(int connfd) {
   // do something
-  //handle_client(connfd);
   int len = 0;
   char buffer[BUFFER_SIZE];
   bzero(buffer, BUFFER_SIZE);
@@ -392,15 +341,11 @@ void handle_connection(int connfd) {
     handle_request(buffer,connfd);
     //printf("Debug request:\n--------------\n%s\n\n",buffer);
   }
-
+  memset(buffer,0x00,sizeof(buffer[0]*BUFFER_SIZE));
 
   // when done, close socket
   close(connfd);
 }
-
-
-
-
 int main(int argc, char *argv[]) {
 
   int listenfd;
